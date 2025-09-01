@@ -5,27 +5,26 @@
 #include <Adafruit_SSD1306.h>
 #include <AFMotor.h>
 
-// Initialize the 4 motors for our vehicle
+// Setup 4 DC motors on motor shield
 AF_DCMotor motor1(1, MOTOR12_1KHZ); 
 AF_DCMotor motor2(2, MOTOR12_1KHZ); 
 AF_DCMotor motor3(3, MOTOR34_1KHZ);
 AF_DCMotor motor4(4, MOTOR34_1KHZ);
 
-// IR receiver setup
+// IR receiver pin
 #define RECV_PIN 44
 IRrecv irReceiver(RECV_PIN);
 decode_results results;
 
-// OLED setup
+// OLED display settings
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define SCREEN_ADDRESS 0x3C // Ensure this is the correct I2C address
+#define SCREEN_ADDRESS 0x3C 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-// Variable to store the last decodedRawData for the IR sensor
 uint32_t last_decodedRawData = 0;
 
-// Function declarations
+// Functions I’ll be using
 void forward(void);
 void left(void);
 void right(void);
@@ -36,17 +35,13 @@ void controlMotors_IR(void);
 void displayMessage(const char* message1, const char* message2);
 
 void setup() {
-  // Removed Serial communication for troubleshooting
-  // Serial.begin(9600);
-
-  // Print to serial monitor
-  irReceiver.enableIRIn(); // Start the receiver
+  irReceiver.enableIRIn();  // turn on IR receiver
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    // Serial.println(F("SSD1306 allocation failed"));
-    for (;;); // Don't proceed, loop forever
+    for (;;); // stay stuck if screen not found
   }
 
+  // clear and setup OLED
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -56,17 +51,14 @@ void setup() {
 
 void loop() {
   if (irReceiver.decode()) {
-    // Follow commands for the IR range
-    controlMotors_IR();
-    displayCommands_IR();
-
-    // Sets IR receiver to accept other signals
-    irReceiver.resume();
+    controlMotors_IR();     // move car
+    displayCommands_IR();   // show stop info
+    irReceiver.resume();    // wait for next button
   }
 }
 
+// car goes forward
 void forward() {
-  // All motors clockwise
   motor1.setSpeed(100);
   motor1.run(FORWARD); 
   motor2.setSpeed(100);
@@ -77,9 +69,8 @@ void forward() {
   motor4.run(FORWARD); 
 }
 
+// car goes backward
 void back() {
-  // All motors counterclockwise
-  // Speed is slowed down to avoid jerking
   motor1.setSpeed(100);
   motor1.run(BACKWARD); 
   motor2.setSpeed(100);
@@ -90,8 +81,8 @@ void back() {
   motor4.run(BACKWARD); 
 }
 
+// car turns left
 void left() {
-  // Motor1 and motor3 counterclockwise
   motor1.setSpeed(100);
   motor1.run(BACKWARD); 
   motor2.setSpeed(100);
@@ -102,8 +93,8 @@ void left() {
   motor4.run(BACKWARD);  
 }
 
+// car turns right
 void right() {
-  // Motor1 and motor3 clockwise
   motor1.setSpeed(100);
   motor1.run(FORWARD); 
   motor2.setSpeed(100);
@@ -114,10 +105,8 @@ void right() {
   motor4.run(FORWARD); 
 } 
 
-// Could not use stop() for this because stop is a built-in function already
+// stop all motors
 void halt() {
-  // Slows motors down to 0
-  // Release is supposed to stop movement of the motor in a gentle way
   motor1.setSpeed(0);
   motor1.run(RELEASE);
   motor2.setSpeed(0);
@@ -128,52 +117,34 @@ void halt() {
   motor4.run(RELEASE);
 }
 
+// check IR button and show messages
 void displayCommands_IR() {
-  // Switch through the different IR frequencies
   switch (irReceiver.decodedIRData.decodedRawData) {
-    case 0xF708FB04:
-      // Remote button - POWER
-      // Serial.println("POWER");
+    case 0xF708FB04: // POWER
       displayMessage("HELLO", "EMT 2461");
       break;
-    case 0xEE11FB04:
-      // Remote button - 1
-      // Serial.println("1");
+    case 0xEE11FB04: // 1
       displayMessage("This is:", "State St");
       break;
-    case 0xED12FB04:
-      // Remote button - 2
-      // Serial.println("2");
+    case 0xED12FB04: // 2
       displayMessage("Next Stop:", "Lemon Ave");
       break;
-    case 0xEC13FB04:
-      // Remote button - 3
-      // Serial.println("3");
+    case 0xEC13FB04: // 3
       displayMessage("This is:", "Lemon Ave");
       break;
-    case 0xEB14FB04:
-      // Remote button - 4
-      // Serial.println("4");
+    case 0xEB14FB04: // 4
       displayMessage("Next Stop:", "Main St");
       break;
-    case 0xEA15FB04:
-      // Remote button - 5
-      // Serial.println("5");
+    case 0xEA15FB04: // 5
       displayMessage("This is:", "Main St");
       break;
-    case 0xE916FB04:
-      // Remote button - 6
-      // Serial.println("6");
+    case 0xE916FB04: // 6
       displayMessage("Next Stop:", "Court St");
       break;
-    case 0xE817FB04:
-      // Remote button - 7
-      // Serial.println("7");
+    case 0xE817FB04: // 7
       displayMessage("This is:", "Court St");
       break;
-    case 0xE718FB04:
-      // Remote button - 8
-      // Serial.println("8");
+    case 0xE718FB04: // 8
       displayMessage("Next Stop:", "State St");
       break;
     default:
@@ -182,31 +153,22 @@ void displayCommands_IR() {
   last_decodedRawData = irReceiver.decodedIRData.decodedRawData;
 }
 
+// check IR button and move car
 void controlMotors_IR() {
   switch (irReceiver.decodedIRData.decodedRawData) {
-    case 0xBF40FB04:
-      // UP button - Forward
-      // Serial.println("UP - FORWARD");
+    case 0xBF40FB04:  // forward
       forward();
       break;
-    case 0xF906FB04:
-      // Right button
-      // Serial.println("RIGHT");
+    case 0xF906FB04:  // right
       right();
       break;
-    case 0xBE41FB04:
-      // Down button - Backward
-      // Serial.println("DOWN - BACKWARD");
+    case 0xBE41FB04:  // back
       back();
       break;
-    case 0xF807FB04:
-      // Left button
-      // Serial.println("LEFT");
+    case 0xF807FB04:  // left
       left();
       break;
-    case 0xBB44FB04:
-      // OK button (stop)
-      // Serial.println("OK - STOP");
+    case 0xBB44FB04:  // stop
       halt();
       break;
     default:
@@ -214,29 +176,23 @@ void controlMotors_IR() {
   }
 }
 
-// This function simplifies printing messages to the OLED display
-// It allows 2 messages to be printed by separating them with a comma
+// print to OLED screen
 void displayMessage(const char* message1, const char* message2) {
-  // First line
   display.clearDisplay();
   display.setCursor(0, 0);
   display.setTextSize(2);
   display.print(message1);
 
-  // Second line
   display.setCursor(0, 20);
   display.setTextSize(2);
   display.print(message2);
 
-  // Third line will display the weather
-  display.setCursor(30, 45); // Set cursor position for temperature
+  display.setCursor(30, 45);
   display.setTextSize(2);
   display.print("68 ");
-  // The following was done to display the degrees icon
   display.drawCircle(display.getCursorX(), 44, 2, SSD1306_WHITE);
   display.setCursor(display.getCursorX() + 4, 45);
   display.print("F");
 
-  // Sends data to the OLED display
   display.display();
 }
